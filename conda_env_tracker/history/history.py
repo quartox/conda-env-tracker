@@ -111,7 +111,7 @@ class History:
         except Exception as err:
             raise CondaEnvTrackerParseHistoryError(
                 f"Failed to parse history with error: {err}"
-            )
+            ) from err
 
     def export(self) -> Dict[str, Any]:
         """export the packages as yaml/json string"""

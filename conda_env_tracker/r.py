@@ -1,4 +1,5 @@
 """Installing, updating and removing R packages."""
+from conda_env_tracker.errors import RError
 from conda_env_tracker.gateways.r import r_install, r_remove, get_r_shell_remove_command
 from conda_env_tracker.packages import Packages
 
@@ -36,7 +37,19 @@ class RHandler:
 
     def remove(self, packages: Packages):
         """R remove packages."""
+        self._check_dependencies(packages=packages)
         r_remove(name=self.env.name, package=packages)
         self.env.update_dependencies(update_r_dependencies=True)
         self.update_history_remove(packages=packages)
         self.env.export()
+
+    def _check_dependencies(self, packages: Packages):
+        """Check dependencies before running R remove."""
+        missing_package_names = []
+        for package in packages:
+            if package.name not in self.env.dependencies.get("r", {}):
+                missing_package_names.append(package.name)
+        if missing_package_names:
+            raise RError(
+                f"Could not find R packages {missing_package_names} in {self.env.name}."
+            )

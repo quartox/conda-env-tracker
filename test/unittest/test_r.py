@@ -3,6 +3,7 @@ import copy
 
 import pytest
 
+from conda_env_tracker.errors import RError
 from conda_env_tracker.packages import Package, Packages
 from conda_env_tracker.r import RHandler
 
@@ -195,3 +196,9 @@ def test_remove_r_package(setup_env, mocker):
     assert actual.actions[-1] == expected["logs"][-1]
 
     assert not (env_io.env_dir / "install.R").exists()
+
+
+def test_r_remove_missing_packages(setup_env):
+    packages = Packages.from_specs("this_is_not_a_real_package")
+    with pytest.raises(RError):
+        RHandler(setup_env["env"]).remove(packages=packages)

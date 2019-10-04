@@ -4,6 +4,7 @@ import copy
 
 import pytest
 
+from conda_env_tracker.errors import PipRemoveError
 from conda_env_tracker.packages import Package, Packages
 from conda_env_tracker.pip import PipHandler, PIP_DEFAULT_INDEX_URL
 
@@ -147,6 +148,7 @@ def test_pip_remove(setup_pip_env, mocker):
 
     mocker.patch("conda_env_tracker.pip.pip_remove")
     PipHandler(env=env).remove(packages=Packages.from_specs("pytest"), yes=True)
+    setup_pip_env["get_package_mock"].return_value["pip"].pop("pytest")
 
     actual = env_io.get_history()
 
@@ -164,3 +166,11 @@ def test_pip_remove(setup_pip_env, mocker):
     assert actual.logs[-1] == "pip uninstall pandas"
     assert actual.actions[-1] == "pip uninstall pandas"
     assert "pip" not in actual.packages
+
+
+def test_pip_remove_package_missing_from_env(setup_pip_env):
+    env = setup_pip_env["env"]
+
+    packages = Packages.from_specs("this_is_a_nonexistant_package")
+    with pytest.raises(PipRemoveError):
+        PipHandler(env=env).remove(packages=packages)

@@ -1,6 +1,7 @@
 """Installing, updating and removing pip packages."""
 from typing import Union
 
+from conda_env_tracker.errors import PipRemoveError
 from conda_env_tracker.gateways.pip import (
     get_pip_install_command,
     get_pip_custom_install_command,
@@ -73,10 +74,26 @@ class PipHandler:
 
     def remove(self, packages: Packages, yes: bool = False):
         """Remove the pip package including custom pip package"""
+        self._check_dependencies(packages=packages)
         pip_remove(name=self.env.name, packages=packages, yes=yes)
         self.env.update_dependencies()
         self.update_history_remove(packages=packages)
         self.env.export()
+
+    def _check_dependencies(self, packages: Packages):
+        """Check dependencies before running pip uninstall.
+
+        pip uninstall does not fail if one of packages is missing from the environment. We preemptively check and
+        raise an error if the package is missing.
+        """
+        missing_package_names = []
+        for package in packages:
+            if package.name not in self.env.dependencies.get("pip", {}):
+                missing_package_names.append(package.name)
+        if missing_package_names:
+            raise PipRemoveError(
+                f"Could not find pip packages {missing_package_names} in {self.env.name}."
+            )
 
     def update_history_remove(self, packages: Packages) -> None:
         """Update history for pip remove."""
